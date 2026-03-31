@@ -144,16 +144,8 @@ Use typical average frost dates. No explanation, just JSON.`);
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
         { method:"POST", signal:controller.signal, headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({ contents:[{ parts:[{ text:`For the seed/plant: "${name}"
-Return ONLY JSON with no extra text:
-{"name":"Common Name","type":"${catList}","startIndoorsWeeksBefore":6,"directSowWeeksRelative":0,"directSowNote":"After last frost","transplantWeeksAfter":2,"canDirectSow":true,"canStartIndoors":true,"notes":"one short tip"}
-- type must be exactly one of: ${catList}
-- For tropical/exotic plants, still return valid JSON using appropriate type
-- startIndoorsWeeksBefore: number or null
-- directSowWeeksRelative: number or null
-- transplantWeeksAfter: number or null
-- No explanation, no markdown, just the JSON object.` }] }) }
-        );
+         body: JSON.stringify({ contents:[{ parts:[{ text: "For the seed/plant: " + JSON.stringify(name) + "\nReturn ONLY JSON with no extra text:\n{\"name\":\"Common Name\",\"type\":\"" + catList + "\",\"startIndoorsWeeksBefore\":6,\"directSowWeeksRelative\":0,\"directSowNote\":\"After last frost\",\"transplantWeeksAfter\":2,\"canDirectSow\":true,\"canStartIndoors\":true,\"notes\":\"one short tip\"}\n- type must be exactly one of: " + catList + "\n- For tropical/exotic plants, still return valid JSON\n- startIndoorsWeeksBefore: number or null\n- directSowWeeksRelative: number or null\n- transplantWeeksAfter: number or null\n- No explanation, no markdown, just the JSON object." }] }) }
+      );
       clearTimeout(timeout);
       const data = await res.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
