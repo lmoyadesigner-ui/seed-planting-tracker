@@ -8,22 +8,25 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; }
-  body { margin: 0; background: #f7f8f6; font-family: 'Inter', system-ui, sans-serif; }
-  input:focus { outline: 2px solid #3d7a52; outline-offset: 1px; }
-  button:hover { filter: brightness(0.95); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #f7f8f6; font-family: system-ui, sans-serif; }
+button { cursor: pointer; }
+button:hover { filter: brightness(0.95); }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const { useState, useEffect, useRef } = React;
 
-const GEMINI_API_KEY = "AIzaSyAL1Kilw0Wh38pmWU01guXZEqMz1ffxiIs"; // <-- paste your Gemini API key
+var GEMINI_API_KEY = "AIzaSyAL1Kilw0Wh38pmWU01guXZEqMz1ffxiIs";
 
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var useState = React.useState;
+var useEffect = React.useEffect;
+var useRef = React.useRef;
 
-const CATEGORIES = [
+var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+var CATS = [
   { key:"vegetable",   label:"Vegetable",          color:"#3d7a52", bg:"#edf6f1" },
   { key:"herb",        label:"Herb",               color:"#6a7a3d", bg:"#f3f6ed" },
   { key:"flower",      label:"Flower",             color:"#7a3d6a", bg:"#f6edf4" },
@@ -32,384 +35,387 @@ const CATEGORIES = [
   { key:"climber",     label:"Climber",            color:"#3d7a6a", bg:"#edf6f4" },
   { key:"tree",        label:"Tree",               color:"#2d5a3d", bg:"#e8f4ed" },
   { key:"houseplant",  label:"House Plant",        color:"#7a6a3d", bg:"#f6f3ed" },
-  { key:"succulent",   label:"Succulent / Cactus", color:"#7a6a2d", bg:"#f6f4e8" },
+  { key:"succulent",   label:"Succulent/Cactus",   color:"#7a6a2d", bg:"#f6f4e8" },
   { key:"vine",        label:"Vine",               color:"#3d6a4a", bg:"#edf5f0" },
-  { key:"grain",       label:"Grass / Grain",      color:"#7a7a3d", bg:"#f6f6ed" },
+  { key:"grain",       label:"Grass/Grain",        color:"#7a7a3d", bg:"#f6f6ed" },
   { key:"bulb",        label:"Bulb",               color:"#7a5a3d", bg:"#f6f1ed" },
-  { key:"fern",        label:"Fern / Tropical",    color:"#2d6a5a", bg:"#edf5f3" },
-  { key:"aquatic",     label:"Aquatic / Pond",     color:"#3d5a7a", bg:"#edf2f8" },
-  { key:"groundcover", label:"Ground Cover",       color:"#4a7a3d", bg:"#f0f6ed" },
+  { key:"fern",        label:"Fern/Tropical",      color:"#2d6a5a", bg:"#edf5f3" },
+  { key:"aquatic",     label:"Aquatic/Pond",       color:"#3d5a7a", bg:"#edf2f8" },
+  { key:"groundcover", label:"Ground Cover",       color:"#4a7a3d", bg:"#f0f6ed" }
 ];
 
 function getCat(key) {
-  return CATEGORIES.find(c => c.key === key?.toLowerCase().replace(/\s+/g,"")) || CATEGORIES[0];
-}
-function getWeekLabel(date) {
-  if (!date) return null;
-  return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}`;
-}
-function addDays(date, days) { const d = new Date(date); d.setDate(d.getDate() + days); return d; }
-function subtractWeeks(date, weeks) { return addDays(date, -weeks * 7); }
-
-function Row({ label, detail }) {
-  return (
-    <div style={{ display:"flex", flexDirection:"column", gap:1 }}>
-      <div style={{ fontSize:13, fontWeight:600 }}>{label}</div>
-      <div style={{ fontSize:13, color:"#555" }}>{detail}</div>
-    </div>
-  );
+  var k = (key || "").toLowerCase().replace(/\s+/g, "");
+  for (var i = 0; i < CATS.length; i++) { if (CATS[i].key === k) return CATS[i]; }
+  return CATS[0];
 }
 
-async function callGemini(prompt) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-    { method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }] }) }
-  );
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/```json|```/g,"").trim() || "";
+function weekLabel(date) {
+  if (!date) return "";
+  return MONTHS[date.getMonth()] + " " + date.getDate();
+}
+
+function addDays(date, days) {
+  var d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function subWeeks(date, weeks) {
+  return addDays(date, -weeks * 7);
+}
+
+function gemini(prompt) {
+  var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
+  return fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    var text = d.candidates[0].content.parts[0].text;
+    return text.replace(/```json/g,"").replace(/```/g,"").trim();
+  });
 }
 
 function App() {
-  const [view, setView] = useState("seeds");
-  const [seeds, setSeeds] = useState([]);
-  const [zipInput, setZipInput] = useState("");
-  const [frostData, setFrostData] = useState(null);
-  const [addingName, setAddingName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [frostLoading, setFrostLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [frostError, setFrostError] = useState("");
-  const [expandedSeed, setExpandedSeed] = useState(null);
-  const [activeFilters, setActiveFilters] = useState([]);
-  const [shareModal, setShareModal] = useState(false);
-  const [shareFilter, setShareFilter] = useState([]);
-  const [shareCopied, setShareCopied] = useState(false);
-  const [importError, setImportError] = useState("");
-  const [importSuccess, setImportSuccess] = useState("");
-  const fileRef = useRef();
+  var seedState = useState([]);
+  var seeds = seedState[0]; var setSeeds = seedState[1];
+  var zipState = useState(""); var zipInput = zipState[0]; var setZipInput = zipState[1];
+  var frostState = useState(null); var frostData = frostState[0]; var setFrostData = frostState[1];
+  var addState = useState(""); var addingName = addState[0]; var setAddingName = addState[1];
+  var loadState = useState(false); var loading = loadState[0]; var setLoading = loadState[1];
+  var frostLoadState = useState(false); var frostLoading = frostLoadState[0]; var setFrostLoading = frostLoadState[1];
+  var errState = useState(""); var error = errState[0]; var setError = errState[1];
+  var fErrState = useState(""); var frostError = fErrState[0]; var setFrostError = fErrState[1];
+  var viewState = useState("seeds"); var view = viewState[0]; var setView = viewState[1];
+  var expandState = useState(null); var expanded = expandState[0]; var setExpanded = expandState[1];
+  var filterState = useState([]); var filters = filterState[0]; var setFilters = filterState[1];
+  var shareState = useState(false); var shareModal = shareState[0]; var setShareModal = shareState[1];
+  var shareFState = useState([]); var shareFilter = shareFState[0]; var setShareFilter = shareFState[1];
+  var copiedState = useState(false); var copied = copiedState[0]; var setCopied = copiedState[1];
+  var impErrState = useState(""); var impErr = impErrState[0]; var setImpErr = impErrState[1];
+  var impOkState = useState(""); var impOk = impOkState[0]; var setImpOk = impOkState[1];
+  var fileRef = useRef(null);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const shared = params.get("shared");
+  useEffect(function() {
+    var params = new URLSearchParams(window.location.search);
+    var shared = params.get("shared");
     if (shared) {
       try {
-        const decoded = JSON.parse(atob(shared));
+        var decoded = JSON.parse(atob(shared));
         if (Array.isArray(decoded) && decoded.length > 0) {
           setSeeds(decoded);
           window.history.replaceState({}, "", window.location.pathname);
         }
-      } catch {}
+      } catch(e) {}
     } else {
       try {
-        const s = localStorage.getItem("spt_seeds"); if (s) setSeeds(JSON.parse(s));
-        const z = localStorage.getItem("spt_zip"); if (z) setZipInput(z);
-        const f = localStorage.getItem("spt_frost"); if (f) setFrostData(JSON.parse(f));
-      } catch {}
+        var s = localStorage.getItem("spt_seeds"); if (s) setSeeds(JSON.parse(s));
+        var z = localStorage.getItem("spt_zip"); if (z) setZipInput(z);
+        var f = localStorage.getItem("spt_frost"); if (f) setFrostData(JSON.parse(f));
+      } catch(e) {}
     }
   }, []);
 
   function saveSeeds(s) {
     setSeeds(s);
-    try { localStorage.setItem("spt_seeds", JSON.stringify(s)); } catch {}
+    try { localStorage.setItem("spt_seeds", JSON.stringify(s)); } catch(e) {}
   }
 
-  async function lookupFrost(zip) {
+  function lookupFrost(zip) {
     if (!zip.trim()) return;
     setFrostLoading(true); setFrostError("");
-    try {
-      const text = await callGemini(`For US zip code ${zip}, return ONLY JSON:
-{"lastFrost":"MM-DD","firstFrost":"MM-DD","zone":"8b","city":"City, State"}
-Use typical average frost dates. No explanation, just JSON.`);
-      const parsed = JSON.parse(text);
-      const year = new Date().getFullYear();
-      const [lm,ld] = parsed.lastFrost.split("-").map(Number);
-      const [fm,fd] = parsed.firstFrost.split("-").map(Number);
-      let lfd = new Date(year,lm-1,ld), ffd = new Date(year,fm-1,fd);
-      if (ffd < lfd) ffd = new Date(year+1,fm-1,fd);
-      const enriched = {...parsed, lastFrostDate:lfd.toISOString(), firstFrostDate:ffd.toISOString()};
+    var prompt = "For US zip code " + zip + ", return ONLY a JSON object like this, no explanation:\n{\"lastFrost\":\"MM-DD\",\"firstFrost\":\"MM-DD\",\"zone\":\"8b\",\"city\":\"City, State\"}";
+    gemini(prompt).then(function(text) {
+      var parsed = JSON.parse(text);
+      var year = new Date().getFullYear();
+      var lParts = parsed.lastFrost.split("-");
+      var fParts = parsed.firstFrost.split("-");
+      var lfd = new Date(year, parseInt(lParts[0])-1, parseInt(lParts[1]));
+      var ffd = new Date(year, parseInt(fParts[0])-1, parseInt(fParts[1]));
+      if (ffd < lfd) ffd = new Date(year+1, parseInt(fParts[0])-1, parseInt(fParts[1]));
+      var enriched = { zone: parsed.zone, city: parsed.city, lastFrostDate: lfd.toISOString(), firstFrostDate: ffd.toISOString() };
       setFrostData(enriched);
-      try { localStorage.setItem("spt_zip", zip); localStorage.setItem("spt_frost", JSON.stringify(enriched)); } catch {}
-    } catch { setFrostError("Couldn't find frost dates. Check your ZIP code."); }
-    setFrostLoading(false);
+      try { localStorage.setItem("spt_zip", zip); localStorage.setItem("spt_frost", JSON.stringify(enriched)); } catch(e) {}
+      setFrostLoading(false);
+    }).catch(function() {
+      setFrostError("Couldn't find frost dates. Check your ZIP.");
+      setFrostLoading(false);
+    });
   }
 
-  async function addSeed(name) {
+  function addSeed(name) {
     if (!name.trim()) return;
     setLoading(true); setError("");
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
-    try {
-      const catList = CATEGORIES.map(c=>c.key).join("|");
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-        { method:"POST", signal:controller.signal, headers:{"Content-Type":"application/json"},
-         body: JSON.stringify({ contents:[{ parts:[{ text: "For the seed/plant: " + JSON.stringify(name) + "\nReturn ONLY JSON with no extra text:\n{\"name\":\"Common Name\",\"type\":\"" + catList + "\",\"startIndoorsWeeksBefore\":6,\"directSowWeeksRelative\":0,\"directSowNote\":\"After last frost\",\"transplantWeeksAfter\":2,\"canDirectSow\":true,\"canStartIndoors\":true,\"notes\":\"one short tip\"}\n- type must be exactly one of: " + catList + "\n- For tropical/exotic plants, still return valid JSON\n- startIndoorsWeeksBefore: number or null\n- directSowWeeksRelative: number or null\n- transplantWeeksAfter: number or null\n- No explanation, no markdown, just the JSON object." }] }) }
-      );
-      clearTimeout(timeout);
-      const data = await res.json();
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      const parsed = JSON.parse(rawText.replace(/```json/g,"").replace(/```/g,"").trim());
-      saveSeeds([...seeds, {...parsed, id:Date.now().toString()}]);
+    var catKeys = CATS.map(function(c) { return c.key; }).join(", ");
+    var prompt = "For the plant or seed called: " + name + "\n"
+      + "Return ONLY a JSON object, no explanation, no markdown backticks.\n"
+      + "Format: {\"name\":\"Common Name\",\"type\":\"one of the types below\",\"startIndoorsWeeksBefore\":6,\"directSowWeeksRelative\":0,\"directSowNote\":\"After last frost\",\"transplantWeeksAfter\":2,\"canDirectSow\":true,\"canStartIndoors\":true,\"notes\":\"one short growing tip\"}\n"
+      + "type must be one of: " + catKeys + "\n"
+      + "startIndoorsWeeksBefore = weeks before last spring frost to start indoors, or null\n"
+      + "directSowWeeksRelative = weeks relative to last frost for direct sow (negative=before, positive=after), or null\n"
+      + "transplantWeeksAfter = weeks after last frost to transplant outdoors, or null\n"
+      + "Return only the JSON object.";
+
+    var timer = setTimeout(function() {
+      setLoading(false);
+      setError(name + " took too long. Please try again.");
+    }, 15000);
+
+    gemini(prompt).then(function(text) {
+      clearTimeout(timer);
+      var parsed = JSON.parse(text);
+      saveSeeds(seeds.concat([Object.assign({}, parsed, { id: String(Date.now()) })]));
       setAddingName("");
-    } catch(e) {
-      clearTimeout(timeout);
-      if (e.name==="AbortError") setError(`"${name}" took too long. Try again.`);
-      else setError("Couldn't add that seed. Try a different name or try again.");
-    }
-    setLoading(false);
+      setLoading(false);
+    }).catch(function() {
+      clearTimeout(timer);
+      setError("Couldn't add that seed. Try again.");
+      setLoading(false);
+    });
   }
 
-  function removeSeed(id) { saveSeeds(seeds.filter(s=>s.id!==id)); }
+  function removeSeed(id) {
+    saveSeeds(seeds.filter(function(s) { return s.id !== id; }));
+  }
 
   function computeDates(seed) {
     if (!frostData) return null;
-    const lf = new Date(frostData.lastFrostDate);
+    var lf = new Date(frostData.lastFrostDate);
     return {
-      startIndoors: seed.canStartIndoors && seed.startIndoorsWeeksBefore!=null ? subtractWeeks(lf, seed.startIndoorsWeeksBefore) : null,
-      directSow: seed.canDirectSow && seed.directSowWeeksRelative!=null ? addDays(lf, seed.directSowWeeksRelative*7) : null,
-      directSowEnd: seed.canDirectSow && seed.directSowWeeksRelative!=null ? addDays(addDays(lf, seed.directSowWeeksRelative*7),14) : null,
-      transplant: seed.canStartIndoors && seed.transplantWeeksAfter!=null ? addDays(lf, seed.transplantWeeksAfter*7) : null,
+      startIndoors: (seed.canStartIndoors && seed.startIndoorsWeeksBefore != null) ? subWeeks(lf, seed.startIndoorsWeeksBefore) : null,
+      directSow: (seed.canDirectSow && seed.directSowWeeksRelative != null) ? addDays(lf, seed.directSowWeeksRelative * 7) : null,
+      directSowEnd: (seed.canDirectSow && seed.directSowWeeksRelative != null) ? addDays(addDays(lf, seed.directSowWeeksRelative * 7), 14) : null,
+      transplant: (seed.canStartIndoors && seed.transplantWeeksAfter != null) ? addDays(lf, seed.transplantWeeksAfter * 7) : null
     };
   }
 
-  const presentCats = CATEGORIES.filter(c=>seeds.some(s=>s.type===c.key));
-  function toggleFilter(key) { setActiveFilters(prev=>prev.includes(key)?prev.filter(k=>k!==key):[...prev,key]); }
-  const filteredSeeds = activeFilters.length===0 ? seeds : seeds.filter(s=>activeFilters.includes(s.type));
+  var presentCats = CATS.filter(function(c) { return seeds.some(function(s) { return s.type === c.key; }); });
+
+  function toggleFilter(key) {
+    if (filters.indexOf(key) >= 0) setFilters(filters.filter(function(k) { return k !== key; }));
+    else setFilters(filters.concat([key]));
+  }
+
+  var shown = filters.length === 0 ? seeds : seeds.filter(function(s) { return filters.indexOf(s.type) >= 0; });
 
   function exportSeeds() {
-    const toExport = activeFilters.length>0 ? seeds.filter(s=>activeFilters.includes(s.type)) : seeds;
-    const blob = new Blob([JSON.stringify(toExport,null,2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href=url; a.download="my-seeds.json"; a.click();
+    var data = filters.length > 0 ? seeds.filter(function(s) { return filters.indexOf(s.type) >= 0; }) : seeds;
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = "my-seeds.json"; a.click();
     URL.revokeObjectURL(url);
   }
 
   function handleImport(e) {
-    setImportError(""); setImportSuccess("");
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
+    setImpErr(""); setImpOk("");
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
       try {
-        const parsed = JSON.parse(ev.target.result);
+        var parsed = JSON.parse(ev.target.result);
         if (!Array.isArray(parsed)) throw new Error();
-        const merged = [...seeds]; let added = 0;
-        for (const s of parsed) {
-          if (!merged.find(x=>x.name===s.name)) { merged.push({...s, id:Date.now().toString()+Math.random()}); added++; }
-        }
+        var merged = seeds.slice(); var added = 0;
+        parsed.forEach(function(s) {
+          if (!merged.some(function(x) { return x.name === s.name; })) {
+            merged.push(Object.assign({}, s, { id: String(Date.now()) + Math.random() }));
+            added++;
+          }
+        });
         saveSeeds(merged);
-        setImportSuccess(`${added} seed${added!==1?"s":""} imported successfully.`);
-        setTimeout(()=>setImportSuccess(""), 4000);
-      } catch { setImportError("Invalid file. Please use a previously exported seed list."); }
+        setImpOk(added + " seed" + (added !== 1 ? "s" : "") + " imported.");
+        setTimeout(function() { setImpOk(""); }, 4000);
+      } catch(err) { setImpErr("Invalid file."); }
     };
-    reader.readAsText(file); e.target.value="";
+    reader.readAsText(file); e.target.value = "";
   }
 
-  function buildShareLink(filterKeys) {
-    const toShare = filterKeys.length>0 ? seeds.filter(s=>filterKeys.includes(s.type)) : seeds;
-    const encoded = btoa(JSON.stringify(toShare));
-    return `${window.location.href.split("?")[0]}?shared=${encoded}`;
+  function buildLink(fkeys) {
+    var data = fkeys.length > 0 ? seeds.filter(function(s) { return fkeys.indexOf(s.type) >= 0; }) : seeds;
+    return window.location.href.split("?")[0] + "?shared=" + btoa(JSON.stringify(data));
   }
 
-  function copyShareLink() {
-    navigator.clipboard.writeText(buildShareLink(shareFilter)).then(()=>{ setShareCopied(true); setTimeout(()=>setShareCopied(false),2500); });
+  function copyLink() {
+    navigator.clipboard.writeText(buildLink(shareFilter)).then(function() {
+      setCopied(true); setTimeout(function() { setCopied(false); }, 2500);
+    });
   }
 
-  const btn = (variant="primary") => ({
-    padding:"8px 14px", borderRadius:8, border:"none", fontSize:13, fontWeight:600, cursor:"pointer",
-    background:variant==="primary"?"#3d7a52":variant==="outline"?"#fff":"#f0f0f0",
-    color:variant==="primary"?"#fff":"#3d7a52",
-    ...(variant==="outline"?{border:"1.5px solid #3d7a52"}:{})
-  });
+  // Styles
+  var G = "#3d7a52";
+  var navBtn = function(active) { return { background:"none", border:"none", padding:"8px 16px", cursor:"pointer", fontSize:14, fontWeight:active?600:400, color:active?G:"#666", borderBottom:active?"2px solid "+G:"2px solid transparent", marginBottom:-1 }; };
+  var pill = function(active, color, bg) { return { padding:"5px 12px", borderRadius:20, border:"1.5px solid "+(active?color:"#ddd"), background:active?bg:"#fff", color:active?color:"#888", fontSize:12, fontWeight:600, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }; };
 
-  return (
-    <div style={{ fontFamily:"system-ui,sans-serif", maxWidth:680, margin:"0 auto", color:"#1a1a1a", minHeight:"100vh" }}>
+  return React.createElement("div", { style:{ fontFamily:"system-ui,sans-serif", maxWidth:680, margin:"0 auto", color:"#1a1a1a", minHeight:"100vh" } },
 
-      {/* Header */}
-      <div style={{ background:"linear-gradient(135deg,#2d5a3d 0%,#4a7c59 100%)", padding:"28px 24px 24px", borderRadius:"0 0 20px 20px", marginBottom:24 }}>
-        <h1 style={{ fontSize:20, fontWeight:700, margin:"0 0 4px", color:"#fff" }}>Seed Planting Tracker</h1>
-        <p style={{ margin:"0 0 20px", color:"rgba(255,255,255,0.7)", fontSize:13 }}>Enter your ZIP code to get personalized planting dates</p>
-        <div style={{ background:"rgba(255,255,255,0.15)", borderRadius:14, padding:16 }}>
-          <label style={{ display:"block", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.8px" }}>Your ZIP Code</label>
-          <div style={{ display:"flex", gap:8 }}>
-            <input value={zipInput} onChange={e=>setZipInput(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&lookupFrost(zipInput)}
-              placeholder="e.g. 98335" maxLength={5}
-              style={{ flex:1, padding:"11px 14px", borderRadius:10, border:"2px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.95)", fontSize:16, fontWeight:600, outline:"none", letterSpacing:"2px" }} />
-            <button onClick={()=>lookupFrost(zipInput)} disabled={frostLoading||!zipInput.trim()} style={{
-              padding:"11px 20px", background:"#fff", color:"#2d5a3d", border:"none",
-              borderRadius:10, fontSize:14, fontWeight:700, cursor:"pointer", opacity:frostLoading?0.6:1
-            }}>{frostLoading?"...":"Get Dates"}</button>
-          </div>
-          {frostError && <p style={{ color:"#ffcccc", fontSize:13, margin:"8px 0 0" }}>{frostError}</p>}
-          {frostData && !frostLoading && (
-            <div style={{ marginTop:12, display:"flex", flexWrap:"wrap", gap:12 }}>
-              <span style={{ color:"#fff", fontSize:13 }}><strong>{frostData.city}</strong> · Zone {frostData.zone}</span>
-              <span style={{ color:"rgba(255,255,255,0.85)", fontSize:13 }}>Last frost: <strong>{getWeekLabel(new Date(frostData.lastFrostDate))}</strong></span>
-              <span style={{ color:"rgba(255,255,255,0.85)", fontSize:13 }}>First frost: <strong>{getWeekLabel(new Date(frostData.firstFrostDate))}</strong></span>
-            </div>
-          )}
-        </div>
-      </div>
+    // Header
+    React.createElement("div", { style:{ background:"linear-gradient(135deg,#2d5a3d,#4a7c59)", padding:"28px 24px 24px", borderRadius:"0 0 20px 20px", marginBottom:24 } },
+      React.createElement("h1", { style:{ fontSize:20, fontWeight:700, margin:"0 0 4px", color:"#fff" } }, "Seed Planting Tracker"),
+      React.createElement("p", { style:{ margin:"0 0 20px", color:"rgba(255,255,255,0.7)", fontSize:13 } }, "Enter your ZIP code to get personalized planting dates"),
+      React.createElement("div", { style:{ background:"rgba(255,255,255,0.15)", borderRadius:14, padding:16 } },
+        React.createElement("label", { style:{ display:"block", color:"rgba(255,255,255,0.85)", fontSize:12, fontWeight:600, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.8px" } }, "Your ZIP Code"),
+        React.createElement("div", { style:{ display:"flex", gap:8 } },
+          React.createElement("input", { value:zipInput, onChange:function(e){setZipInput(e.target.value);}, onKeyDown:function(e){if(e.key==="Enter")lookupFrost(zipInput);}, placeholder:"e.g. 98335", maxLength:5, style:{ flex:1, padding:"11px 14px", borderRadius:10, border:"2px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.95)", fontSize:16, fontWeight:600, outline:"none", letterSpacing:"2px" } }),
+          React.createElement("button", { onClick:function(){lookupFrost(zipInput);}, disabled:frostLoading||!zipInput.trim(), style:{ padding:"11px 20px", background:"#fff", color:"#2d5a3d", border:"none", borderRadius:10, fontSize:14, fontWeight:700, opacity:frostLoading?0.6:1 } }, frostLoading ? "..." : "Get Dates")
+        ),
+        frostError ? React.createElement("p", { style:{ color:"#ffcccc", fontSize:13, marginTop:8 } }, frostError) : null,
+        frostData && !frostLoading ? React.createElement("div", { style:{ marginTop:12, display:"flex", flexWrap:"wrap", gap:12 } },
+          React.createElement("span", { style:{ color:"#fff", fontSize:13 } }, React.createElement("strong", null, frostData.city), " · Zone " + frostData.zone),
+          React.createElement("span", { style:{ color:"rgba(255,255,255,0.85)", fontSize:13 } }, "Last frost: ", React.createElement("strong", null, weekLabel(new Date(frostData.lastFrostDate)))),
+          React.createElement("span", { style:{ color:"rgba(255,255,255,0.85)", fontSize:13 } }, "First frost: ", React.createElement("strong", null, weekLabel(new Date(frostData.firstFrostDate))))
+        ) : null
+      )
+    ),
 
-      <div style={{ padding:"0 16px 32px" }}>
-        {/* Nav */}
-        <div style={{ display:"flex", gap:4, marginBottom:20, borderBottom:"1px solid #e8e8e8" }}>
-          {[["seeds","My Seeds"],["calendar","Calendar"]].map(([v,label])=>(
-            <button key={v} onClick={()=>setView(v)} style={{
-              background:"none", border:"none", padding:"8px 16px", cursor:"pointer",
-              fontSize:14, fontWeight:view===v?600:400, color:view===v?"#3d7a52":"#666",
-              borderBottom:view===v?"2px solid #3d7a52":"2px solid transparent", marginBottom:-1
-            }}>{label}</button>
-          ))}
-        </div>
+    React.createElement("div", { style:{ padding:"0 16px 32px" } },
 
-        {view==="seeds" && (
-          <div>
-            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-              <input value={addingName} onChange={e=>setAddingName(e.target.value)}
-                placeholder="Add a seed (e.g. Tomato, Basil, Zinnia...)"
-                style={{ flex:1, padding:"10px 14px", border:"1px solid #ddd", borderRadius:10, fontSize:14, outline:"none" }}
-                onKeyDown={e=>e.key==="Enter"&&!loading&&addSeed(addingName)} disabled={loading} />
-              <button onClick={()=>addSeed(addingName)} disabled={loading||!addingName.trim()} style={{
-                padding:"10px 18px", background:"#3d7a52", color:"#fff", border:"none",
-                borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", opacity:loading?0.6:1
-              }}>{loading?"Adding...":"+ Add"}</button>
-            </div>
-            {error && <p style={{ color:"#c0392b", fontSize:13, marginBottom:12 }}>{error}</p>}
-            {importError && <p style={{ color:"#c0392b", fontSize:13, marginBottom:12 }}>{importError}</p>}
-            {importSuccess && <p style={{ color:"#3d7a52", fontSize:13, marginBottom:12, fontWeight:600 }}>{importSuccess}</p>}
+      // Nav
+      React.createElement("div", { style:{ display:"flex", gap:4, marginBottom:20, borderBottom:"1px solid #e8e8e8" } },
+        React.createElement("button", { onClick:function(){setView("seeds");}, style:navBtn(view==="seeds") }, "My Seeds"),
+        React.createElement("button", { onClick:function(){setView("calendar");}, style:navBtn(view==="calendar") }, "Calendar")
+      ),
 
-            {presentCats.length>=2 && (
-              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
-                <button onClick={()=>setActiveFilters([])} style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid", borderColor:activeFilters.length===0?"#3d7a52":"#ddd", background:activeFilters.length===0?"#edf6f1":"#fff", color:activeFilters.length===0?"#3d7a52":"#888", fontSize:12, fontWeight:600, cursor:"pointer" }}>All</button>
-                {presentCats.map(cat=>{
-                  const active=activeFilters.includes(cat.key);
-                  return (
-                    <button key={cat.key} onClick={()=>toggleFilter(cat.key)} style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid", borderColor:active?cat.color:"#ddd", background:active?cat.bg:"#fff", color:active?cat.color:"#888", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
-                      {cat.label}
-                      <span style={{ background:active?cat.color:"#e0e0e0", color:active?"#fff":"#888", borderRadius:10, padding:"1px 6px", fontSize:11 }}>{seeds.filter(s=>s.type===cat.key).length}</span>
-                    </button>
+      // Seeds view
+      view === "seeds" ? React.createElement("div", null,
+        React.createElement("div", { style:{ display:"flex", gap:8, marginBottom:16 } },
+          React.createElement("input", { value:addingName, onChange:function(e){setAddingName(e.target.value);}, placeholder:"Add a seed (e.g. Tomato, Basil, Zinnia...)", disabled:loading, onKeyDown:function(e){if(e.key==="Enter"&&!loading)addSeed(addingName);}, style:{ flex:1, padding:"10px 14px", border:"1px solid #ddd", borderRadius:10, fontSize:14, outline:"none" } }),
+          React.createElement("button", { onClick:function(){addSeed(addingName);}, disabled:loading||!addingName.trim(), style:{ padding:"10px 18px", background:G, color:"#fff", border:"none", borderRadius:10, fontSize:14, fontWeight:600, opacity:loading?0.6:1 } }, loading ? "Adding..." : "+ Add")
+        ),
+        error ? React.createElement("p", { style:{ color:"#c0392b", fontSize:13, marginBottom:12 } }, error) : null,
+        impErr ? React.createElement("p", { style:{ color:"#c0392b", fontSize:13, marginBottom:12 } }, impErr) : null,
+        impOk ? React.createElement("p", { style:{ color:G, fontSize:13, marginBottom:12, fontWeight:600 } }, impOk) : null,
+
+        // Filter pills
+        presentCats.length >= 2 ? React.createElement("div", { style:{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 } },
+          React.createElement("button", { onClick:function(){setFilters([]);}, style:pill(filters.length===0, G, "#edf6f1") }, "All"),
+          presentCats.map(function(cat) {
+            var active = filters.indexOf(cat.key) >= 0;
+            var count = seeds.filter(function(s){return s.type===cat.key;}).length;
+            return React.createElement("button", { key:cat.key, onClick:function(){toggleFilter(cat.key);}, style:pill(active, cat.color, cat.bg) },
+              cat.label,
+              React.createElement("span", { style:{ background:active?cat.color:"#e0e0e0", color:active?"#fff":"#888", borderRadius:10, padding:"1px 6px", fontSize:11 } }, count)
+            );
+          })
+        ) : null,
+
+        seeds.length === 0 ? React.createElement("div", { style:{ textAlign:"center", padding:"48px 20px", color:"#aaa" } }, React.createElement("p", null, "No seeds yet — add your first one above!")) : null,
+        seeds.length > 0 && shown.length === 0 ? React.createElement("div", { style:{ textAlign:"center", padding:"32px 20px", color:"#aaa" } }, React.createElement("p", null, "No seeds match the selected filter.")) : null,
+
+        React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:8 } },
+          shown.map(function(seed) {
+            var cat = getCat(seed.type);
+            var dates = computeDates(seed);
+            var isExp = expanded === seed.id;
+            return React.createElement("div", { key:seed.id, style:{ border:"1px solid #e8e8e8", borderRadius:12, overflow:"hidden", background:"#fff" } },
+              React.createElement("div", { onClick:function(){setExpanded(isExp?null:seed.id);}, style:{ display:"flex", alignItems:"center", padding:"13px 16px", cursor:"pointer", gap:10 } },
+                React.createElement("span", { style:{ background:cat.bg, color:cat.color, fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:20, textTransform:"uppercase", letterSpacing:"0.5px", whiteSpace:"nowrap" } }, cat.label),
+                React.createElement("span", { style:{ fontWeight:600, fontSize:15, flex:1 } }, seed.name),
+                dates ? React.createElement("span", { style:{ fontSize:12, color:"#999", whiteSpace:"nowrap" } }, dates.startIndoors ? "Indoor " + weekLabel(dates.startIndoors) : dates.directSow ? "Sow " + weekLabel(dates.directSow) : "") : null,
+                React.createElement("span", { style:{ color:"#ccc", fontSize:16, marginLeft:4 } }, isExp ? "▲" : "▼")
+              ),
+              isExp ? React.createElement("div", { style:{ padding:"4px 16px 16px", borderTop:"1px solid #f0f0f0", background:"#fafafa" } },
+                !frostData ? React.createElement("p", { style:{ fontSize:13, color:"#888", marginTop:10 } }, "Enter your ZIP code above to see planting dates.") :
+                React.createElement("div", { style:{ display:"flex", flexDirection:"column", gap:10, marginTop:12 } },
+                  dates.startIndoors ? React.createElement("div", null, React.createElement("div", { style:{ fontSize:13, fontWeight:600 } }, "Start Indoors"), React.createElement("div", { style:{ fontSize:13, color:"#555" } }, weekLabel(dates.startIndoors) + " · " + seed.startIndoorsWeeksBefore + " wks before last frost")) : null,
+                  dates.transplant ? React.createElement("div", null, React.createElement("div", { style:{ fontSize:13, fontWeight:600 } }, "Transplant Outdoors"), React.createElement("div", { style:{ fontSize:13, color:"#555" } }, weekLabel(dates.transplant) + " · " + seed.transplantWeeksAfter + " wks after last frost")) : null,
+                  dates.directSow ? React.createElement("div", null, React.createElement("div", { style:{ fontSize:13, fontWeight:600 } }, "Direct Sow"), React.createElement("div", { style:{ fontSize:13, color:"#555" } }, weekLabel(dates.directSow) + "–" + weekLabel(dates.directSowEnd) + " · " + seed.directSowNote)) : null,
+                  seed.notes ? React.createElement("p", { style:{ margin:"4px 0 0", fontSize:13, color:"#666", fontStyle:"italic" } }, seed.notes) : null
+                ),
+                React.createElement("button", { onClick:function(){removeSeed(seed.id);}, style:{ marginTop:14, background:"none", border:"1px solid #e0e0e0", borderRadius:6, padding:"5px 12px", fontSize:12, color:"#aaa", cursor:"pointer" } }, "Remove")
+              ) : null
+            );
+          })
+        ),
+
+        seeds.length > 0 ? React.createElement("div", { style:{ marginTop:24, paddingTop:16, borderTop:"1px solid #eee", display:"flex", flexWrap:"wrap", gap:8 } },
+          React.createElement("button", { onClick:exportSeeds, style:{ padding:"8px 14px", borderRadius:8, border:"1.5px solid "+G, background:"#fff", color:G, fontSize:13, fontWeight:600 } }, "Export List"),
+          React.createElement("button", { onClick:function(){fileRef.current.click();}, style:{ padding:"8px 14px", borderRadius:8, border:"1px solid #ddd", background:"#f5f5f5", color:"#555", fontSize:13, fontWeight:600 } }, "Import List"),
+          React.createElement("input", { ref:fileRef, type:"file", accept:".json", onChange:handleImport, style:{ display:"none" } }),
+          React.createElement("button", { onClick:function(){setShareFilter(filters.slice()); setShareModal(true);}, style:{ padding:"8px 14px", borderRadius:8, border:"1.5px solid "+G, background:"#fff", color:G, fontSize:13, fontWeight:600 } }, "Share List")
+        ) : null
+
+      ) : null,
+
+      // Calendar view
+      view === "calendar" ? React.createElement("div", null,
+        !frostData ? React.createElement("p", { style:{ fontSize:14, color:"#888" } }, "Enter your ZIP code above to see your calendar.") :
+        seeds.length === 0 ? React.createElement("p", { style:{ fontSize:14, color:"#888" } }, "Add seeds in My Seeds to populate your calendar.") :
+        React.createElement("div", null,
+          presentCats.length >= 2 ? React.createElement("div", { style:{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 } },
+            React.createElement("button", { onClick:function(){setFilters([]);}, style:pill(filters.length===0, G, "#edf6f1") }, "All"),
+            presentCats.map(function(cat) {
+              var active = filters.indexOf(cat.key) >= 0;
+              return React.createElement("button", { key:cat.key, onClick:function(){toggleFilter(cat.key);}, style:pill(active, cat.color, cat.bg) }, cat.label);
+            })
+          ) : null,
+          React.createElement("div", { style:{ overflowX:"auto" } },
+            React.createElement("table", { style:{ borderCollapse:"collapse", minWidth:580, width:"100%" } },
+              React.createElement("thead", null,
+                React.createElement("tr", { style:{ borderBottom:"2px solid #e8e8e8" } },
+                  React.createElement("th", { style:{ textAlign:"left", padding:"6px 10px 10px", fontSize:12, color:"#888", fontWeight:600, minWidth:110 } }, "Seed"),
+                  MONTHS.map(function(m) { return React.createElement("th", { key:m, style:{ fontSize:11, color:"#888", fontWeight:600, padding:"6px 2px 10px", textAlign:"center", minWidth:36 } }, m); })
+                )
+              ),
+              React.createElement("tbody", null,
+                shown.map(function(seed, idx) {
+                  var dates = computeDates(seed);
+                  var cat = getCat(seed.type);
+                  if (!dates) return null;
+                  return React.createElement("tr", { key:seed.id, style:{ borderBottom:"1px solid #f0f0f0", background:idx%2===0?"#fff":"#fafafa" } },
+                    React.createElement("td", { style:{ padding:"10px", fontSize:13, fontWeight:500 } }, seed.name),
+                    [0,1,2,3,4,5,6,7,8,9,10,11].map(function(m) {
+                      var mk = [];
+                      if (dates.startIndoors && dates.startIndoors.getMonth()===m) mk.push("I");
+                      if (dates.directSow && dates.directSow.getMonth()===m) mk.push("S");
+                      if (dates.transplant && dates.transplant.getMonth()===m) mk.push("T");
+                      return React.createElement("td", { key:m, style:{ padding:"4px 2px", textAlign:"center" } },
+                        mk.length > 0 ? React.createElement("span", { style:{ background:cat.bg, color:cat.color, borderRadius:6, padding:"2px 5px", fontSize:11, fontWeight:700, display:"inline-block" } }, mk.join(" ")) : null
+                      );
+                    })
                   );
-                })}
-              </div>
-            )}
+                })
+              )
+            )
+          ),
+          React.createElement("div", { style:{ marginTop:14, display:"flex", gap:16, flexWrap:"wrap" } },
+            React.createElement("span", { style:{ fontSize:12, color:"#777" } }, React.createElement("strong", null, "I"), " = Start Indoors"),
+            React.createElement("span", { style:{ fontSize:12, color:"#777" } }, React.createElement("strong", null, "S"), " = Direct Sow"),
+            React.createElement("span", { style:{ fontSize:12, color:"#777" } }, React.createElement("strong", null, "T"), " = Transplant")
+          )
+        )
+      ) : null
 
-            {seeds.length===0 && <div style={{ textAlign:"center", padding:"48px 20px", color:"#aaa" }}><p style={{ margin:0, fontSize:14 }}>No seeds yet — add your first one above!</p></div>}
-            {seeds.length>0&&filteredSeeds.length===0 && <div style={{ textAlign:"center", padding:"32px 20px", color:"#aaa" }}><p style={{ margin:0, fontSize:14 }}>No seeds match the selected filter.</p></div>}
+    ),
 
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {filteredSeeds.map(seed=>{
-                const cat=getCat(seed.type), dates=computeDates(seed), isExp=expandedSeed===seed.id;
-                return (
-                  <div key={seed.id} style={{ border:"1px solid #e8e8e8", borderRadius:12, overflow:"hidden", background:"#fff" }}>
-                    <div onClick={()=>setExpandedSeed(isExp?null:seed.id)} style={{ display:"flex", alignItems:"center", padding:"13px 16px", cursor:"pointer", gap:10 }}>
-                      <span style={{ background:cat.bg, color:cat.color, fontSize:11, fontWeight:700, padding:"3px 8px", borderRadius:20, textTransform:"uppercase", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>{cat.label}</span>
-                      <span style={{ fontWeight:600, fontSize:15, flex:1 }}>{seed.name}</span>
-                      {dates && <span style={{ fontSize:12, color:"#999", whiteSpace:"nowrap" }}>{dates.startIndoors?`Indoor ${getWeekLabel(dates.startIndoors)}`:dates.directSow?`Sow ${getWeekLabel(dates.directSow)}`:""}</span>}
-                      <span style={{ color:"#ccc", fontSize:16, marginLeft:4 }}>{isExp?"▲":"▼"}</span>
-                    </div>
-                    {isExp && (
-                      <div style={{ padding:"4px 16px 16px", borderTop:"1px solid #f0f0f0", background:"#fafafa" }}>
-                        {!frostData ? <p style={{ fontSize:13, color:"#888", marginTop:10 }}>Enter your ZIP code above to see planting dates.</p> : (
-                          <div style={{ display:"flex", flexDirection:"column", gap:10, marginTop:12 }}>
-                            {dates.startIndoors && <Row label="Start Indoors" detail={`${getWeekLabel(dates.startIndoors)} · ${seed.startIndoorsWeeksBefore} wks before last frost`} />}
-                            {dates.transplant && <Row label="Transplant Outdoors" detail={`${getWeekLabel(dates.transplant)} · ${seed.transplantWeeksAfter} wks after last frost`} />}
-                            {dates.directSow && <Row label="Direct Sow" detail={`${getWeekLabel(dates.directSow)}–${getWeekLabel(dates.directSowEnd)} · ${seed.directSowNote}`} />}
-                            {seed.notes && <p style={{ margin:"4px 0 0", fontSize:13, color:"#666", fontStyle:"italic" }}>{seed.notes}</p>}
-                          </div>
-                        )}
-                        <button onClick={()=>removeSeed(seed.id)} style={{ marginTop:14, background:"none", border:"1px solid #e0e0e0", borderRadius:6, padding:"5px 12px", fontSize:12, color:"#aaa", cursor:"pointer" }}>Remove</button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+    // Share modal
+    shareModal ? React.createElement("div", { style:{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:16 } },
+      React.createElement("div", { style:{ background:"#fff", borderRadius:16, padding:24, maxWidth:460, width:"100%", boxShadow:"0 8px 32px rgba(0,0,0,0.15)" } },
+        React.createElement("h2", { style:{ margin:"0 0 6px", fontSize:17, fontWeight:700 } }, "Share Your Seed List"),
+        React.createElement("p", { style:{ margin:"0 0 16px", fontSize:13, color:"#666" } }, "Choose which types to include, then copy the link."),
+        React.createElement("div", { style:{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 } },
+          React.createElement("button", { onClick:function(){setShareFilter([]);}, style:pill(shareFilter.length===0, G, "#edf6f1") }, "All (" + seeds.length + ")"),
+          presentCats.map(function(cat) {
+            var active = shareFilter.indexOf(cat.key) >= 0;
+            var count = seeds.filter(function(s){return s.type===cat.key;}).length;
+            return React.createElement("button", { key:cat.key, onClick:function(){ if(active) setShareFilter(shareFilter.filter(function(k){return k!==cat.key;})); else setShareFilter(shareFilter.concat([cat.key])); }, style:pill(active, cat.color, cat.bg) },
+              cat.label,
+              React.createElement("span", { style:{ background:active?cat.color:"#e0e0e0", color:active?"#fff":"#888", borderRadius:10, padding:"1px 6px", fontSize:11 } }, count)
+            );
+          })
+        ),
+        React.createElement("div", { style:{ background:"#f5f5f5", borderRadius:8, padding:"10px 12px", fontSize:12, color:"#666", wordBreak:"break-all", marginBottom:16, maxHeight:60, overflow:"hidden" } }, buildLink(shareFilter).slice(0, 100) + "..."),
+        React.createElement("div", { style:{ display:"flex", gap:8 } },
+          React.createElement("button", { onClick:copyLink, style:{ flex:1, padding:"10px", background:G, color:"#fff", border:"none", borderRadius:8, fontSize:14, fontWeight:600 } }, copied ? "Copied!" : "Copy Link"),
+          React.createElement("button", { onClick:function(){setShareModal(false); setCopied(false);}, style:{ padding:"10px 16px", background:"#f0f0f0", border:"none", borderRadius:8, fontSize:14, color:"#555", fontWeight:600 } }, "Close")
+        ),
+        React.createElement("p", { style:{ marginTop:12, fontSize:12, color:"#aaa" } }, "Anyone with this link can view and import your selected seeds.")
+      )
+    ) : null
 
-            {seeds.length>0 && (
-              <div style={{ marginTop:24, paddingTop:16, borderTop:"1px solid #eee", display:"flex", flexWrap:"wrap", gap:8 }}>
-                <button onClick={exportSeeds} style={btn("outline")}>Export {activeFilters.length>0?"Filtered ":""}List</button>
-                <button onClick={()=>fileRef.current.click()} style={btn("ghost")}>Import List</button>
-                <input ref={fileRef} type="file" accept=".json" onChange={handleImport} style={{ display:"none" }} />
-                <button onClick={()=>{ setShareFilter(activeFilters); setShareModal(true); }} style={btn("outline")}>Share List</button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {view==="calendar" && (
-          <div>
-            {!frostData && <p style={{ fontSize:14, color:"#888" }}>Enter your ZIP code above to see your planting calendar.</p>}
-            {frostData&&seeds.length===0 && <p style={{ fontSize:14, color:"#888" }}>Add seeds in <strong>My Seeds</strong> to populate your calendar.</p>}
-            {frostData&&seeds.length>0 && (
-              <div>
-                {presentCats.length>=2 && (
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
-                    <button onClick={()=>setActiveFilters([])} style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid", borderColor:activeFilters.length===0?"#3d7a52":"#ddd", background:activeFilters.length===0?"#edf6f1":"#fff", color:activeFilters.length===0?"#3d7a52":"#888", fontSize:12, fontWeight:600, cursor:"pointer" }}>All</button>
-                    {presentCats.map(cat=>{ const active=activeFilters.includes(cat.key); return <button key={cat.key} onClick={()=>toggleFilter(cat.key)} style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid", borderColor:active?cat.color:"#ddd", background:active?cat.bg:"#fff", color:active?cat.color:"#888", fontSize:12, fontWeight:600, cursor:"pointer" }}>{cat.label}</button>; })}
-                  </div>
-                )}
-                <div style={{ overflowX:"auto" }}>
-                  <table style={{ borderCollapse:"collapse", minWidth:580, width:"100%" }}>
-                    <thead>
-                      <tr style={{ borderBottom:"2px solid #e8e8e8" }}>
-                        <th style={{ textAlign:"left", padding:"6px 10px 10px", fontSize:12, color:"#888", fontWeight:600, minWidth:110 }}>Seed</th>
-                        {MONTH_NAMES.map(m=><th key={m} style={{ fontSize:11, color:"#888", fontWeight:600, padding:"6px 2px 10px", textAlign:"center", minWidth:36 }}>{m}</th>)}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredSeeds.map((seed,idx)=>{
-                        const dates=computeDates(seed), cat=getCat(seed.type);
-                        if (!dates) return null;
-                        return (
-                          <tr key={seed.id} style={{ borderBottom:"1px solid #f0f0f0", background:idx%2===0?"#fff":"#fafafa" }}>
-                            <td style={{ padding:"10px", fontSize:13, fontWeight:500 }}>{seed.name}</td>
-                            {[0,1,2,3,4,5,6,7,8,9,10,11].map(m=>{
-                              const mk=[];
-                              if (dates.startIndoors?.getMonth()===m) mk.push("I");
-                              if (dates.directSow?.getMonth()===m) mk.push("S");
-                              if (dates.transplant?.getMonth()===m) mk.push("T");
-                              return <td key={m} style={{ padding:"4px 2px", textAlign:"center" }}>{mk.length>0&&<span style={{ background:cat.bg, color:cat.color, borderRadius:6, padding:"2px 5px", fontSize:11, fontWeight:700, display:"inline-block" }}>{mk.join(" ")}</span>}</td>;
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ marginTop:14, display:"flex", gap:16, flexWrap:"wrap" }}>
-                  {[["I","Start Indoors"],["S","Direct Sow"],["T","Transplant"]].map(([c,l])=><span key={l} style={{ fontSize:12, color:"#777" }}><strong>{c}</strong> = {l}</span>)}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {shareModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:16 }}>
-          <div style={{ background:"#fff", borderRadius:16, padding:24, maxWidth:460, width:"100%", boxShadow:"0 8px 32px rgba(0,0,0,0.15)" }}>
-            <h2 style={{ margin:"0 0 6px", fontSize:17, fontWeight:700 }}>Share Your Seed List</h2>
-            <p style={{ margin:"0 0 16px", fontSize:13, color:"#666" }}>Choose which types to include, then copy the link.</p>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
-              <button onClick={()=>setShareFilter([])} style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid", borderColor:shareFilter.length===0?"#3d7a52":"#ddd", background:shareFilter.length===0?"#edf6f1":"#fff", color:shareFilter.length===0?"#3d7a52":"#888", fontSize:12, fontWeight:600, cursor:"pointer" }}>All ({seeds.length})</button>
-              {presentCats.map(cat=>{ const active=shareFilter.includes(cat.key); return <button key={cat.key} onClick={()=>setShareFilter(prev=>prev.includes(cat.key)?prev.filter(k=>k!==cat.key):[...prev,cat.key])} style={{ padding:"5px 12px", borderRadius:20, border:"1.5px solid", borderColor:active?cat.color:"#ddd", background:active?cat.bg:"#fff", color:active?cat.color:"#888", fontSize:12, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>{cat.label} <span style={{ background:active?cat.color:"#e0e0e0", color:active?"#fff":"#888", borderRadius:10, padding:"1px 6px", fontSize:11 }}>{seeds.filter(s=>s.type===cat.key).length}</span></button>; })}
-            </div>
-            <div style={{ background:"#f5f5f5", borderRadius:8, padding:"10px 12px", fontSize:12, color:"#666", wordBreak:"break-all", marginBottom:16, maxHeight:60, overflow:"hidden" }}>{buildShareLink(shareFilter).slice(0,120)}…</div>
-            <div style={{ display:"flex", gap:8 }}>
-              <button onClick={copyShareLink} style={{ ...btn("primary"), flex:1 }}>{shareCopied?"Copied!":"Copy Link"}</button>
-              <button onClick={()=>{ setShareModal(false); setShareCopied(false); }} style={btn("ghost")}>Close</button>
-            </div>
-            <p style={{ marginTop:12, fontSize:12, color:"#aaa" }}>Anyone with this link can view and import your selected seeds.</p>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
 </body>
 </html>
