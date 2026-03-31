@@ -153,10 +153,11 @@ Return ONLY JSON with no extra text:
 - directSowWeeksRelative: number or null
 - transplantWeeksAfter: number or null
 - No explanation, no markdown, just the JSON object.` }] }) }
-      );
+        );
       clearTimeout(timeout);
       const data = await res.json();
-      const parsed = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/```json|```/g,"").trim());
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const parsed = JSON.parse(rawText.replace(/```json/g,"").replace(/```/g,"").trim());
       saveSeeds([...seeds, {...parsed, id:Date.now().toString()}]);
       setAddingName("");
     } catch(e) {
